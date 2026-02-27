@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Secure Cat Verification</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+        background: #f3f4f6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      .card {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        width: 380px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .grid {
+        margin-top: 15px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .cell {
+        height: 100px;
+        border-radius: 10px;
+        overflow: hidden;
+        cursor: pointer;
+        position: relative;
+      }
+
+      .cell img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .cell.selected::after {
+        content: "✓";
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: #2563eb;
+        color: white;
+        padding: 3px 7px;
+        border-radius: 6px;
+        font-weight: bold;
+      }
+
+      button {
+        margin-top: 15px;
+        width: 100%;
+        padding: 10px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .success {
+        color: green;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+
+      .error {
+        color: red;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="card">
+      <h3>Select all images with cats</h3>
+      <div class="grid" id="grid"></div>
+      <button onclick="submit()">Verify</button>
+      <div id="message"></div>
+    </div>
+
+    <script>
+      let selectedIndexes = [];
+
+      function loadChallenge() {
+        fetch("/generate")
+          .then((res) => res.json())
+          .then((data) => {
+            const grid = document.getElementById("grid");
+            grid.innerHTML = "";
+            selectedIndexes = [];
+
+            data.images.forEach((src, index) => {
+              const cell = document.createElement("div");
+              cell.className = "cell";
+
+              const img = document.createElement("img");
+              img.src = src;
+              cell.appendChild(img);
+
+              cell.addEventListener("click", () => {
+                cell.classList.toggle("selected");
+
+                if (selectedIndexes.includes(index)) {
+                  selectedIndexes = selectedIndexes.filter((i) => i !== index);
+                } else {
+                  selectedIndexes.push(index);
+                }
+              });
+
+              grid.appendChild(cell);
+            });
+          });
+      }
+
+      function submit() {
+        fetch("/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selected: selectedIndexes }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            const msg = document.getElementById("message");
+
+            if (data.success) {
+              msg.innerHTML = "<div class='success'>✔ Verified!</div>";
+            } else {
+              msg.innerHTML = "<div class='error'>✖ Try again</div>";
+              loadChallenge();
+            }
+          });
+      }
+
+      loadChallenge();
+    </script>
+  </body>
+</html>
